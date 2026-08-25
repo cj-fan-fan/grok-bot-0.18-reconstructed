@@ -1,0 +1,40 @@
+{
+  "official": {
+    "bundleId": "com.anysphere.sand",
+    "productName": "Grok Bot",
+    "urlSchemes": ["sand", "grokbot"]
+  },
+  "reconstructed": {
+    "bundleId": "com.anysphere.sand.reconstructed",
+    "productName": "Grok Bot 0.18 Reconstructed",
+    "displayName": "Grok Bot 0.18 Reconstructed",
+    "urlScheme": "sand-reconstructed",
+    "userDataDirName": "Grok Bot 0.18 Reconstructed",
+    "productionDataDirname": ".grokbot-reconstructed",
+    "legacyDataRelative": ".cursor/sand-reconstructed",
+    "windowsLegacyProfileName": "Grok Bot 0.18 Reconstructed Legacy",
+    "mcpOAuthLoopbackPort": 18787,
+    "localDocker": {
+      "containerName": "grok-bot-reconstructed-local-vm",
+      "volumeWorkspace": "grok-bot-reconstructed-local-vm-workspace",
+      "volumeData": "grok-bot-reconstructed-local-vm-data",
+      "ownerLabelKey": "com.grok-bot.reconstructed.local-vm",
+      "hostPorts": {
+        "execDaemon": 11337,
+        "forkRouter": 11339,
+        "gateway": 11340,
+        "novncPrimary": 16080,
+        "novncFork": 16081,
+        "egress": 18790
+      },
+      "containerPorts": {
+        "execDaemon": 1337,
+        "forkRouter": 1339,
+        "gateway": 1340,
+        "novncPrimary": 6080,
+        "novncFork": 6081,
+        "egress": 8790
+      }
+    }
+  }
+}

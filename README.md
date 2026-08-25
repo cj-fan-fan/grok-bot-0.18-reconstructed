@@ -41,9 +41,16 @@ The resulting app is a hybrid by design:
 - the polished shipped renderer remains the UI baseline;
 - a narrow deterministic transform adds the reconstructed Router settings UI;
 - original and patched renderer chunk hashes are recorded and verified; and
-- the finished app uses a separate bundle identifier and an ad-hoc signature.
+- the finished app uses a separate bundle identifier, Electron name, userData
+  directory, URL scheme, and an ad-hoc signature.
 
-The upstream app installed on the machine is never overwritten.
+The upstream app installed on the machine is never overwritten. Official Grok
+Bot and the reconstructed build are intended to run side-by-side: the fork uses
+`com.anysphere.sand.reconstructed`, product/CFBundleName
+`Grok Bot 0.18 Reconstructed` (so Application Support is not `Grok Bot`),
+scheme `sand-reconstructed` instead of `sand`/`grokbot`, and remapped local
+Docker loopback ports. Cursor.com login redirects that still emit `sand://`
+continue to belong to the official app.
 
 ### Why retain the shipped renderer?
 
@@ -159,6 +166,10 @@ bundle identity, ad-hoc signs it, and verifies the result. Output is written to:
 ```text
 dist/Grok Bot 0.18 Reconstructed.app
 ```
+
+After packaging on a Mac, official `/Applications/Grok Bot.app` can stay open.
+The reconstructed process should keep running with
+`--user-data-dir=…/Application Support/Grok Bot 0.18 Reconstructed`.
 
 Reconstructed packages disable the upstream updater at the packaging boundary
 and default upstream Sentry and telemetry emission off. Explicitly supplied

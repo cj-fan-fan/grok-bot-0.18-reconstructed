@@ -3,8 +3,10 @@ import { join, resolve } from "node:path";
 
 import { findSystemErrno } from "../../shared/system-errno.js";
 
-export const LEGACY_PROFILE_NAME = "Sand";
-export const CANONICAL_PROFILE_NAME = "Grok Bot";
+import { RECONSTRUCTED_PRODUCT_NAME, RECONSTRUCTED_WINDOWS_LEGACY_PROFILE_NAME } from "../../shared/reconstructed-identity.js";
+
+export const LEGACY_PROFILE_NAME = RECONSTRUCTED_WINDOWS_LEGACY_PROFILE_NAME;
+export const CANONICAL_PROFILE_NAME = RECONSTRUCTED_PRODUCT_NAME;
 export const PROFILE_MARKER_FILENAME = ".grokbot-user-data-v1";
 
 export type WindowsUserDataSettlement =

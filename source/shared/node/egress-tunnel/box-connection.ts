@@ -1,4 +1,6 @@
-export const EGRESS_TUNNEL_WS_PORT = 8790;
+import { LOCAL_DOCKER_CONTAINER_PORTS, LOCAL_DOCKER_HOST_PORTS } from "../../reconstructed-identity.js";
+
+export const EGRESS_TUNNEL_WS_PORT = LOCAL_DOCKER_CONTAINER_PORTS.egress;
 
 export interface BoxConnectionInfo {
   readonly baseUrl: string;
@@ -26,7 +28,8 @@ export function deriveEgressTunnelWsUrl(baseUrl: string, podProxied: boolean): s
     if (firstLabel == null || !/-\d+$/.test(firstLabel)) return null;
     url.hostname = [firstLabel.replace(/-\d+$/, `-${EGRESS_TUNNEL_WS_PORT}`), ...rest].join(".");
   } else {
-    url.port = String(EGRESS_TUNNEL_WS_PORT);
+    const gatewayPort = Number.parseInt(url.port || (url.protocol === "https:" ? "443" : "80"), 10);
+    url.port = String(gatewayPort === LOCAL_DOCKER_HOST_PORTS.gateway ? LOCAL_DOCKER_HOST_PORTS.egress : EGRESS_TUNNEL_WS_PORT);
   }
   url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
   url.pathname = "/";

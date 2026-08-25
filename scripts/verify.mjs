@@ -8,6 +8,7 @@ import {
   outputApp,
   reconstructedBundleId,
   reconstructedName,
+  reconstructedUrlScheme,
   repoRoot,
   sourceAppDir,
   upstreamAsarSha256,
@@ -256,10 +257,13 @@ const bundleId = await capture(SYSTEM_TOOLS.plutil, ["-extract", "CFBundleIdenti
 if (bundleId !== reconstructedBundleId) throw new Error(`Unexpected reconstructed bundle ID: ${bundleId}`);
 const displayName = await capture(SYSTEM_TOOLS.plutil, ["-extract", "CFBundleDisplayName", "raw", infoPlist]);
 if (displayName !== reconstructedName) throw new Error(`Unexpected reconstructed display name: ${displayName}`);
+const bundleName = await capture(SYSTEM_TOOLS.plutil, ["-extract", "CFBundleName", "raw", infoPlist]);
+if (bundleName !== reconstructedName) throw new Error(`Unexpected reconstructed CFBundleName: ${bundleName}`);
 const plistText = await capture(SYSTEM_TOOLS.plutil, ["-convert", "xml1", "-o", "-", infoPlist]);
 if (plistText.includes("ElectronAsarIntegrity")) throw new Error("Stale ElectronAsarIntegrity metadata remains in the reconstructed application");
 const urlTypes = await capture(SYSTEM_TOOLS.plutil, ["-extract", "CFBundleURLTypes", "xml1", "-o", "-", infoPlist]);
-if (!/<key>CFBundleURLSchemes<\/key>[\s\S]*<string>sand<\/string>/.test(urlTypes)) throw new Error("Reconstructed application has no sand URL registration");
+if (!new RegExp(`<key>CFBundleURLSchemes</key>[\\s\\S]*<string>${reconstructedUrlScheme}</string>`).test(urlTypes)) throw new Error("Reconstructed application has no unique URL registration");
+if (/<string>sand<\/string>|<string>grokbot<\/string>/.test(urlTypes)) throw new Error("Reconstructed application still claims an official URL scheme");
 
 await run(SYSTEM_TOOLS.codesign, ["--verify", "--deep", "--strict", verifiedApp]);
 const cleanCount = runtimeComposition.filter(({ mode }) => mode === "clean-source").length;

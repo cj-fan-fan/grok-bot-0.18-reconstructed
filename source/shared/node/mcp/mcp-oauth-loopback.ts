@@ -23,6 +23,7 @@ import {
   renderMcpOAuthErrorPage as renderErrorPage,
   renderMcpOAuthSuccessPage as renderSuccessPage,
 } from "../../mcp-oauth-callback-page.js";
+import { RECONSTRUCTED_MCP_OAUTH_LOOPBACK_CALLBACK_URL } from "../../reconstructed-identity.js";
 const renderMcpOAuthSuccessPage = (args: {
   serverName: string | undefined;
 }): string =>
@@ -35,8 +36,7 @@ const renderMcpOAuthErrorPage = (args: {
   renderErrorPage(
     args.serverName == null ? undefined : { serverName: args.serverName },
   );
-export const MCP_OAUTH_LOOPBACK_CALLBACK_URL =
-  "http://localhost:8787/callback";
+export const MCP_OAUTH_LOOPBACK_CALLBACK_URL = RECONSTRUCTED_MCP_OAUTH_LOOPBACK_CALLBACK_URL;
 const BACKEND_MCP_OAUTH_PENDING_STATE_TTL_MS = 15 * 60 * 1_000;
 const MCP_OAUTH_PENDING_TTL_MS = BACKEND_MCP_OAUTH_PENDING_STATE_TTL_MS + 60_000;
 const MCP_OAUTH_COMPLETION_RETRY_DELAY_MS = 500;

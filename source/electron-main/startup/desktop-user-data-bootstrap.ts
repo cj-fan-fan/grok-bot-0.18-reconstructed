@@ -1,11 +1,16 @@
+import { join } from "node:path";
+
 import {
   resolveSandDataRootOverride,
   resolveSandUserDataDir,
   SAND_DATA_ROOT_ENV,
   SAND_USER_DATA_DIR_ENV,
 } from "../../host/host-paths.js";
+import {
+  RECONSTRUCTED_PRODUCT_NAME,
+  RECONSTRUCTED_USER_DATA_DIR_NAME,
+} from "../../shared/reconstructed-identity.js";
 import { applyStartupDataRootMigration, resolveExistingSandProductionRootDir, type DataRootSettlement } from "./startup-data-root-migration.js";
-import { applyWindowsUserDataMigration, isWindowsUpdatedLaunch } from "./windows-user-data-migration.js";
 
 export const STRANDED_USER_DATA_REASONS = new Set([
   "canonical-marked",
@@ -26,6 +31,7 @@ export const STRANDED_DATA_ROOT_REASONS = new Set([
 
 export interface DesktopBootstrapApp {
   readonly isPackaged: boolean;
+  setName?(name: string): void;
   setPath(name: "userData" | "sessionData", path: string): void;
   getPath(name: "appData" | "userData"): string;
 }
@@ -40,32 +46,29 @@ export interface DesktopUserDataBootstrapOptions {
   reportFailureClass?(surface: "startup", operation: "user-data-settlement", reason: string): void;
 }
 
+export function applyReconstructedDesktopIdentity(
+  app: Pick<DesktopBootstrapApp, "setName" | "setPath" | "getPath">,
+  userDataDir: string,
+): string {
+  app.setName?.(RECONSTRUCTED_PRODUCT_NAME);
+  app.setPath("userData", userDataDir);
+  app.setPath("sessionData", userDataDir);
+  return userDataDir;
+}
+
+export function reconstructedDesktopUserDataDir(appDataDir: string): string {
+  return join(appDataDir, RECONSTRUCTED_USER_DATA_DIR_NAME);
+}
+
 export function bootstrapDesktopUserData(options: DesktopUserDataBootstrapOptions): string | null {
   const argv = options.argv ?? process.argv;
   const env = options.env ?? process.env;
-  const platform = options.platform ?? process.platform;
-  const isolatedUserDataDir = resolveSandUserDataDir(argv, env, options.cwd ?? process.cwd());
-  if (isolatedUserDataDir != null) {
-    env[SAND_USER_DATA_DIR_ENV] = isolatedUserDataDir;
-    options.app.setPath("userData", isolatedUserDataDir);
-    options.app.setPath("sessionData", isolatedUserDataDir);
-    console.log(`[sand] using isolated user-data dir: ${isolatedUserDataDir}`);
-    return isolatedUserDataDir;
-  }
-  const settlement = applyWindowsUserDataMigration({
-    platform,
-    isPackaged: options.app.isPackaged,
-    isLabBuild: options.isLabBuild,
-    hasIsolatedUserData: false,
-    isUpdatedLaunch: isWindowsUpdatedLaunch(argv),
-    appDataDir: options.app.getPath("appData"),
-    canonicalUserDataDir: options.app.getPath("userData"),
-    setPath: (name, path) => options.app.setPath(name, path),
-  });
-  if (STRANDED_USER_DATA_REASONS.has(settlement.reason)) {
-    options.reportFailureClass?.("startup", "user-data-settlement", settlement.reason);
-  }
-  return null;
+  const isolatedUserDataDir = resolveSandUserDataDir(argv, env, options.cwd ?? process.cwd())
+    ?? reconstructedDesktopUserDataDir(options.app.getPath("appData"));
+  env[SAND_USER_DATA_DIR_ENV] = isolatedUserDataDir;
+  applyReconstructedDesktopIdentity(options.app, isolatedUserDataDir);
+  console.log(`[sand] using isolated user-data dir: ${isolatedUserDataDir}`);
+  return isolatedUserDataDir;
 }
 
 export interface DesktopDataRootBootstrapOptions {

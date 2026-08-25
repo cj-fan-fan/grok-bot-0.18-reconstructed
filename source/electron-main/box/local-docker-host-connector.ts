@@ -10,11 +10,19 @@ import type { RecreateResult } from "./box-recreate-commands.js";
 import type { SandRemoteHostConnector } from "./box-host-connector.js";
 import type { GatewayConnection } from "./gateway-descriptor-cache.js";
 import { uiCopy } from "../../shared/ui-locale.js";
+import {
+  LOCAL_DOCKER_BOX_CONTAINER,
+  LOCAL_DOCKER_CONTAINER_PORTS,
+  LOCAL_DOCKER_GATEWAY_URL,
+  LOCAL_DOCKER_HOST_PORTS,
+  LOCAL_DOCKER_OWNER_LABEL,
+  LOCAL_DOCKER_OWNER_LABEL_KEY,
+  LOCAL_DOCKER_VOLUME_DATA,
+  LOCAL_DOCKER_VOLUME_WORKSPACE,
+} from "../../shared/reconstructed-identity.js";
 
 export const LOCAL_DOCKER_BOX_IMAGE = "public.ecr.aws/k0i0n2g5/cursorenvironments/universal:sand-box-latest";
-export const LOCAL_DOCKER_BOX_CONTAINER = "grok-bot-local-vm";
-export const LOCAL_DOCKER_GATEWAY_URL = "http://127.0.0.1:1340";
-export const LOCAL_DOCKER_OWNER_LABEL = "com.grok-bot.local-vm=1";
+export { LOCAL_DOCKER_BOX_CONTAINER, LOCAL_DOCKER_GATEWAY_URL, LOCAL_DOCKER_OWNER_LABEL };
 export const LOCAL_DOCKER_SCHEMA_VERSION = "6";
 const READY_TIMEOUT_MS = 180_000;
 const OPTIONAL_CREDENTIAL_TIMEOUT_MS = 3_000;
@@ -93,11 +101,11 @@ async function inspectContainer(): Promise<{ exists: boolean; running: boolean; 
     return {
       exists: true,
       running: value.State?.Running === true,
-      owned: value.Config?.Labels?.["com.grok-bot.local-vm"] === "1",
+      owned: value.Config?.Labels?.[LOCAL_DOCKER_OWNER_LABEL_KEY] === "1",
       image: typeof value.Config?.Image === "string" ? value.Config.Image : "",
-      hostSha256: typeof value.Config?.Labels?.["com.grok-bot.local-vm.host-sha256"] === "string" ? value.Config.Labels["com.grok-bot.local-vm.host-sha256"] as string : "",
-      hasInferenceCredential: value.Config?.Labels?.["com.grok-bot.local-vm.inference-credential"] === "1",
-      schemaVersion: typeof value.Config?.Labels?.["com.grok-bot.local-vm.schema-version"] === "string" ? value.Config.Labels["com.grok-bot.local-vm.schema-version"] as string : "",
+      hostSha256: typeof value.Config?.Labels?.[`${LOCAL_DOCKER_OWNER_LABEL_KEY}.host-sha256`] === "string" ? value.Config.Labels[`${LOCAL_DOCKER_OWNER_LABEL_KEY}.host-sha256`] as string : "",
+      hasInferenceCredential: value.Config?.Labels?.[`${LOCAL_DOCKER_OWNER_LABEL_KEY}.inference-credential`] === "1",
+      schemaVersion: typeof value.Config?.Labels?.[`${LOCAL_DOCKER_OWNER_LABEL_KEY}.schema-version`] === "string" ? value.Config.Labels[`${LOCAL_DOCKER_OWNER_LABEL_KEY}.schema-version`] as string : "",
     };
   } catch { throw new Error("Docker returned malformed container inspection data."); }
 }
@@ -107,7 +115,7 @@ export async function getLocalDockerStatus(settingsPath: string): Promise<LocalD
   if (!daemon.ok) return { available: false, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: daemon.output || uiCopy("Docker is not running.") };
   const inspected = await inspectContainer();
   if (!inspected.exists) return { available: true, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: uiCopy("Ready to create the local VM.") };
-  if (!inspected.owned) return { available: true, running: inspected.running, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: uiCopy("Container grok-bot-local-vm exists but is not owned by Grok Bot.") };
+  if (!inspected.owned) return { available: true, running: inspected.running, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: uiCopy("Container grok-bot-reconstructed-local-vm exists but is not owned by Grok Bot.") };
   const ready = inspected.running && await gatewayReady(await readOrCreateToken(settingsPath));
   return { available: true, running: inspected.running, ready, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: ready ? uiCopy("Local Docker VM is ready.") : inspected.running ? uiCopy("Container is starting.") : uiCopy("Local Docker VM is stopped.") };
 }
@@ -170,7 +178,7 @@ async function ensureLocalDockerBox(settingsPath: string, inferenceCredential?: 
   const daemon = await runDocker(["info", "--format", "{{.ServerVersion}}"]).catch(() => ({ ok: false, output: uiCopy("Docker is not installed.") }));
   if (!daemon.ok) throw new Error(`${uiCopy("Local Docker VM is selected, but Docker is unavailable:")} ${daemon.output || uiCopy("start Docker and try again")}`);
   const inspected = await inspectContainer();
-  if (inspected.exists && !inspected.owned) throw new Error(uiCopy("Local Docker VM cannot use grok-bot-local-vm: an unowned container already has that name."));
+  if (inspected.exists && !inspected.owned) throw new Error(uiCopy("Local Docker VM cannot use grok-bot-reconstructed-local-vm: an unowned container already has that name."));
   if (inspected.exists && inspected.image !== LOCAL_DOCKER_BOX_IMAGE) throw new Error(`Local Docker VM container uses unexpected image ${inspected.image}. Remove it explicitly before changing images.`);
   if (inspected.exists && (inspected.schemaVersion !== LOCAL_DOCKER_SCHEMA_VERSION || inspected.hostSha256 !== hostBundle.sha256 || (inferenceCredential != null && !inspected.hasInferenceCredential))) {
     const removed = await runDocker(["rm", "--force", LOCAL_DOCKER_BOX_CONTAINER]);
@@ -185,16 +193,20 @@ async function ensureLocalDockerBox(settingsPath: string, inferenceCredential?: 
     const authMounts = await localAuthMountArguments();
     const created = await runDocker([
       "run", "--detach", "--name", LOCAL_DOCKER_BOX_CONTAINER,
-      "--label", LOCAL_DOCKER_OWNER_LABEL, "--label", `com.grok-bot.local-vm.host-sha256=${hostBundle.sha256}`,
-      "--label", `com.grok-bot.local-vm.box-exec-daemon-sha256=${hostBundle.boxExecDaemonSha256}`,
-      "--label", `com.grok-bot.local-vm.inference-credential=${inferenceCredential == null ? "0" : "1"}`,
-      "--label", `com.grok-bot.local-vm.schema-version=${LOCAL_DOCKER_SCHEMA_VERSION}`,
+      "--label", LOCAL_DOCKER_OWNER_LABEL, "--label", `${LOCAL_DOCKER_OWNER_LABEL_KEY}.host-sha256=${hostBundle.sha256}`,
+      "--label", `${LOCAL_DOCKER_OWNER_LABEL_KEY}.box-exec-daemon-sha256=${hostBundle.boxExecDaemonSha256}`,
+      "--label", `${LOCAL_DOCKER_OWNER_LABEL_KEY}.inference-credential=${inferenceCredential == null ? "0" : "1"}`,
+      "--label", `${LOCAL_DOCKER_OWNER_LABEL_KEY}.schema-version=${LOCAL_DOCKER_SCHEMA_VERSION}`,
       "--platform", "linux/amd64", "--restart", "unless-stopped",
-      "--env", "SAND_SUPERVISOR_ENABLED=1", "--env", "SAND_BOX_AUTO_UPDATE=0", "--env", "SAND_USE_EXISTING_BOX_EXEC_DAEMON=1", "--env", "SAND_TREE_SITTER_NODE_DEPS=/home/box/deps", "--env", "NODE_PATH=/home/box/deps", "--env", "SAND_GATEWAY_BIND_HOST=0.0.0.0", "--env", "SAND_HOST_PORT=1340", "--env", `SAND_GATEWAY_TOKEN=${token}`,
+      "--env", "SAND_SUPERVISOR_ENABLED=1", "--env", "SAND_BOX_AUTO_UPDATE=0", "--env", "SAND_USE_EXISTING_BOX_EXEC_DAEMON=1", "--env", "SAND_TREE_SITTER_NODE_DEPS=/home/box/deps", "--env", "NODE_PATH=/home/box/deps", "--env", "SAND_GATEWAY_BIND_HOST=0.0.0.0", "--env", `SAND_HOST_PORT=${LOCAL_DOCKER_CONTAINER_PORTS.gateway}`, "--env", `SAND_GATEWAY_TOKEN=${token}`,
       ...(inferenceCredential == null ? [] : ["--env", "SAND_DEV_INFERENCE_TOKEN_FILE=/run/grok-bot/inference.json", "--env", `SAND_BACKEND_URL=${inferenceCredential.backendUrl}`]),
-      "--publish", "127.0.0.1:1337:1337", "--publish", "127.0.0.1:1339:1339", "--publish", "127.0.0.1:1340:1340",
-      "--publish", "127.0.0.1:6080:6080", "--publish", "127.0.0.1:6081:6081", "--publish", "127.0.0.1:8790:8790",
-      "--volume", "grok-bot-local-vm-workspace:/workspace", "--volume", "grok-bot-local-vm-data:/home/box/sand-data",
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.execDaemon}:${LOCAL_DOCKER_CONTAINER_PORTS.execDaemon}`,
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.forkRouter}:${LOCAL_DOCKER_CONTAINER_PORTS.forkRouter}`,
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.gateway}:${LOCAL_DOCKER_CONTAINER_PORTS.gateway}`,
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.novncPrimary}:${LOCAL_DOCKER_CONTAINER_PORTS.novncPrimary}`,
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.novncFork}:${LOCAL_DOCKER_CONTAINER_PORTS.novncFork}`,
+      "--publish", `127.0.0.1:${LOCAL_DOCKER_HOST_PORTS.egress}:${LOCAL_DOCKER_CONTAINER_PORTS.egress}`,
+      "--volume", `${LOCAL_DOCKER_VOLUME_WORKSPACE}:/workspace`, "--volume", `${LOCAL_DOCKER_VOLUME_DATA}:/home/box/sand-data`,
       "--mount", `type=bind,src=${hostBundle.path},dst=/home/box/sand-host/host-main.cjs,readonly`,
       "--mount", `type=bind,src=${dirname(hostBundle.boxExecDaemonPath)},dst=/home/box/box-exec-daemon,readonly`,
       ...(inferenceFile == null ? [] : ["--mount", `type=bind,src=${dirname(inferenceFile)},dst=/run/grok-bot,readonly`]),

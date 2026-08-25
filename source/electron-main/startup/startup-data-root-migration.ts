@@ -17,6 +17,7 @@ import {
 } from "../../host/host-paths.js";
 import { isSandHostProcess } from "../../host/host-lock.js";
 import { findSystemErrno } from "../../shared/system-errno.js";
+import { RECONSTRUCTED_LEGACY_DATA_RELATIVE } from "../../shared/reconstructed-identity.js";
 
 export const DATA_ROOT_MARKER_FILENAME = ".grokbot-data-root-v1";
 export const LOCAL_EXEC_DAEMON_DISCOVERY_FILENAME = "local-exec-daemon.json";
@@ -59,7 +60,7 @@ function attemptSync<T>(work: () => T): Attempt<T> {
 }
 
 export function getLegacySandProductionRootDir(homeDir = homedir()): string {
-  return join(homeDir, ".cursor", "sand");
+  return join(homeDir, RECONSTRUCTED_LEGACY_DATA_RELATIVE);
 }
 
 export function inspectDataRootDirectory(path: string): "absent" | "directory" | "unsafe" {

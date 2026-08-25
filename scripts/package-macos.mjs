@@ -4,7 +4,8 @@ import {
   outputApp,
   outputDir,
   reconstructedBundleId,
-  reconstructedName
+  reconstructedName,
+  reconstructedUrlScheme
 } from "./lib/config.mjs";
 import { buildFidelityReconstructedAsar } from "./clean-build.mjs";
 import { signAppBundleAdHoc } from "./lib/codesign.mjs";
@@ -46,15 +47,15 @@ await cp(builtAsarUnpacked, packagedUnpacked, {
 const infoPlist = path.join(outputApp, "Contents", "Info.plist");
 await run(SYSTEM_TOOLS.plutil, ["-remove", "ElectronAsarIntegrity", infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleIdentifier", "-string", reconstructedBundleId, infoPlist]);
+await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleName", "-string", reconstructedName, infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleDisplayName", "-string", reconstructedName, infoPlist]);
-// The backend currently emits only the `sand` auth/deep-link target. Make the
-// reconstructed bundle's claim explicit and remove inherited aliases such as
-// `grokbot`; the original bundle remains untouched and remains reference-only.
+// Register a unique scheme so Launch Services does not hand auth/deep-link
+// callbacks to the official Grok Bot (`sand` / `grokbot`).
 await run(SYSTEM_TOOLS.plutil, ["-remove", "CFBundleURLTypes", infoPlist]);
-await run(SYSTEM_TOOLS.plutil, ["-insert", "CFBundleURLTypes", "-xml", "<array><dict><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLName</key><string>Grok Bot reconstructed auth callback</string><key>CFBundleURLSchemes</key><array><string>sand</string></array></dict></array>", infoPlist]);
-// Keep CFBundleName/CFBundleExecutable as "Grok Bot": Electron derives the
-// expected nested helper names from it, and this build intentionally reuses the
-// exact ABI-matched 0.18 runtime. CFBundleDisplayName provides the fork's name.
+await run(SYSTEM_TOOLS.plutil, ["-insert", "CFBundleURLTypes", "-xml", `<array><dict><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLName</key><string>Grok Bot reconstructed auth callback</string><key>CFBundleURLSchemes</key><array><string>${reconstructedUrlScheme}</string></array></dict></array>`, infoPlist]);
+// Keep CFBundleExecutable as "Grok Bot": Electron derives nested helper names
+// from the ABI-matched 0.18 runtime binaries. CFBundleName/productName isolate
+// Dock, menu bar, userData, and the single-instance lock.
 
 await rm(path.join(outputApp, "Contents", "_CodeSignature"), { recursive: true, force: true });
 try {

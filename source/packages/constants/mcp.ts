@@ -1,3 +1,5 @@
+import { RECONSTRUCTED_MCP_OAUTH_LOOPBACK_CALLBACK_URL } from "../../shared/reconstructed-identity.js";
+
 export interface McpOAuthProviderPolicy {
   provider: "google-workspace";
   clientRegistration: "static";
@@ -30,4 +32,4 @@ export const GOOGLE_WORKSPACE_MCP_HOSTS = new Set([...MCP_OAUTH_PROVIDER_POLICIE
 export const MCP_OAUTH_EXTENSION_ID = "anysphere.cursor-mcp";
 export const MCP_OAUTH_RETURN_PATH = "/oauth/return";
 export const MCP_OAUTH_DESKTOP_RETURN_URL = `cursor://${MCP_OAUTH_EXTENSION_ID}${MCP_OAUTH_RETURN_PATH}`;
-export const MCP_OAUTH_LOOPBACK_CALLBACK_URL = "http://localhost:8787/callback";
+export const MCP_OAUTH_LOOPBACK_CALLBACK_URL = RECONSTRUCTED_MCP_OAUTH_LOOPBACK_CALLBACK_URL;

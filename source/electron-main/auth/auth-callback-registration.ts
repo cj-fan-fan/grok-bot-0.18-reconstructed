@@ -24,9 +24,9 @@ function configuredToken(value: string | undefined, fallback: string, label: str
 }
 
 /**
- * `sand` is the only redirect target currently emitted by cursor.com. A
- * future backend-specific target may be selected explicitly, but must remain
- * a protocol-safe token and must be paired with the same server contract.
+ * Reconstructed builds register `sand-reconstructed` so they do not steal the
+ * official app's `sand://` or `grokbot://` handlers. cursor.com still emits
+ * `sand` for official clients; this fork's callbacks use the unique scheme.
  */
 export function resolveAuthRedirectTarget(env: NodeJS.ProcessEnv = process.env): string {
   return configuredToken(env.SAND_AUTH_REDIRECT_TARGET, SAND_AUTH_REDIRECT_TARGET, "SAND_AUTH_REDIRECT_TARGET");
