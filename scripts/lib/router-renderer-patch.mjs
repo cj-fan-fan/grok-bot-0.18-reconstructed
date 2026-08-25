@@ -2,14 +2,16 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const REGISTRY_BEFORE = 'const wDn=[{id:"general",label:"General",icon:"settings-gear"},{id:"usage",label:"Usage & Billing",icon:"chart-bars"},{id:"beta",label:"Updates",icon:"cloud-download"}]';
-const REGISTRY_AFTER = 'const wDn=[{id:"general",label:"General",icon:"settings-gear"},{id:"router",label:"Router",icon:"git-branch"},{id:"usage",label:"Usage & Billing",icon:"chart-bars"},{id:"beta",label:"Updates",icon:"cloud-download"}]';
+import { applyLocaleMap, DEFAULT_UI_LOCALE } from "./locale-copy.mjs";
+
+export const REGISTRY_BEFORE = 'const wDn=[{id:"general",label:"General",icon:"settings-gear"},{id:"usage",label:"Usage & Billing",icon:"chart-bars"},{id:"beta",label:"Updates",icon:"cloud-download"}]';
+export const REGISTRY_AFTER = 'const wDn=[{id:"general",label:"General",icon:"settings-gear"},{id:"router",label:"Router",icon:"git-branch"},{id:"usage",label:"Usage & Billing",icon:"chart-bars"},{id:"beta",label:"Updates",icon:"cloud-download"}]';
 const GENERAL_BEFORE = 'Q=x==="general"?a.jsx(Te,{children:a.jsx(Sa,{auth:t})}):null';
 const GENERAL_AFTER = 'Q=x==="general"?a.jsx(Te,{children:a.jsx(Sa,{auth:t})}):x==="router"?a.jsx(RRouterPanel,{}):null';
 const USAGE_BEFORE = 'Z=x==="usage"?a.jsx(Te,{children:a.jsx(Na,{})}):null';
 const USAGE_AFTER = 'Z=x==="usage"?a.jsx(Te,{children:a.jsx(RRouterUsage,{})}):null';
 const COMPONENT_ANCHOR = 'function Sa(s){';
-const COMPONENT_SOURCE = String.raw`
+export const COMPONENT_SOURCE = String.raw`
 const RRouterProviders=[
   {value:"cursor",label:"Cursor",description:"Use your signed-in Cursor account.",kind:"account"},
   {value:"claude-code",label:"Claude Code",description:"Use your existing Claude Code sign-in and Grok Bot's connected plugins.",kind:"local",localKey:"claude-code"},
@@ -55,40 +57,49 @@ export function patchOriginalSettingsPanel(source) {
 
 export async function applyOriginalRendererRouterPatch({ stageRoot }) {
   const assetsRoot = path.join(stageRoot, "dist", "renderer", "assets");
-  const registryCandidates = [];
-  const panelCandidates = [];
+  const originals = [];
   for (const name of await readdir(assetsRoot)) {
     if (!name.endsWith(".js")) continue;
     const target = path.join(assetsRoot, name);
-    const source = await readFile(target, "utf8");
-    if (source.includes(REGISTRY_BEFORE)) registryCandidates.push({ name, target, source });
-    if (source.includes(COMPONENT_ANCHOR) && source.includes(GENERAL_BEFORE) && source.includes(USAGE_BEFORE)) panelCandidates.push({ name, target, source });
+    originals.push({ name, target, source: await readFile(target, "utf8") });
   }
+  const registryCandidates = originals.filter(({ source }) => source.includes(REGISTRY_BEFORE));
+  const panelCandidates = originals.filter(({ source }) => source.includes(COMPONENT_ANCHOR) && source.includes(GENERAL_BEFORE) && source.includes(USAGE_BEFORE));
   if (registryCandidates.length !== 1 || panelCandidates.length !== 1) {
     throw new Error(`Expected one original Settings registry and panel chunk, found ${registryCandidates.length}/${panelCandidates.length}.`);
   }
+  const roleByName = new Map([
+    [registryCandidates[0].name, "registry"],
+    [panelCandidates[0].name, "panel"],
+  ]);
+  const routerPatched = new Map(originals.map(({ name, source }) => [name, source]));
+  routerPatched.set(registryCandidates[0].name, patchOriginalSettingsRegistry(registryCandidates[0].source));
+  routerPatched.set(panelCandidates[0].name, patchOriginalSettingsPanel(panelCandidates[0].source));
   const changes = [];
-  for (const [role, candidate, transform] of [
-    ["registry", registryCandidates[0], patchOriginalSettingsRegistry],
-    ["panel", panelCandidates[0], patchOriginalSettingsPanel],
-  ]) {
-    const patched = transform(candidate.source);
-    await writeFile(candidate.target, patched);
+  let localeHits = 0;
+  for (const original of originals) {
+    const afterRouter = routerPatched.get(original.name) ?? original.source;
+    const localized = applyLocaleMap(afterRouter);
+    localeHits += localized.replacements;
+    if (localized.source === original.source) continue;
+    await writeFile(original.target, localized.source);
     changes.push({
-      role,
-      path: `dist/renderer/assets/${candidate.name}`,
-      original: { bytes: Buffer.byteLength(candidate.source), sha256: sha256(candidate.source) },
-      patched: { bytes: Buffer.byteLength(patched), sha256: sha256(patched) },
+      role: roleByName.get(original.name) ?? "locale",
+      path: `dist/renderer/assets/${original.name}`,
+      original: { bytes: Buffer.byteLength(original.source), sha256: sha256(original.source) },
+      patched: { bytes: Buffer.byteLength(localized.source), sha256: sha256(localized.source) },
     });
   }
+  changes.sort((left, right) => left.path.localeCompare(right.path));
   const record = {
     schemaVersion: 1,
     mode: "original-renderer-settings-extension",
+    locale: DEFAULT_UI_LOCALE,
     chunks: changes,
-    features: ["settings-router-provider", "settings-local-docker-vm", "usage-current-provider"],
-    transformations: ["settings-registry", "router-panel", "usage-panel"],
+    features: ["settings-router-provider", "settings-local-docker-vm", "usage-current-provider", "locale-zh-CN"],
+    transformations: ["settings-registry", "router-panel", "usage-panel", "locale-zh-CN"],
   };
   const provenancePath = path.join(stageRoot, "dist", "renderer-router-extension.json");
   await writeFile(provenancePath, `${JSON.stringify(record, null, 2)}\n`);
-  return { ...record, provenancePath, provenanceBytes: (await stat(provenancePath)).size };
+  return { ...record, localeHits, provenancePath, provenanceBytes: (await stat(provenancePath)).size };
 }

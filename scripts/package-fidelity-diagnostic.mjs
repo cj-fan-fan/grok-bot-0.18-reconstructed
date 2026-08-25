@@ -9,6 +9,7 @@ import { extractFile } from "@electron/asar";
 import { buildFidelityReconstructedAsar } from "./clean-build.mjs";
 import { signAppBundleAdHoc } from "./lib/codesign.mjs";
 import { outputDir, repoRoot, sourceAppDir } from "./lib/config.mjs";
+import { retargetPackagedElectronHelpers } from "./lib/electron-mac-helpers.mjs";
 import {
   verifyChecksumPinnedRendererPackage,
   verifyOfficialMacReference,
@@ -72,6 +73,7 @@ await run(SYSTEM_TOOLS.plutil, ["-remove", "ElectronAsarIntegrity", infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleIdentifier", "-string", `com.anysphere.sand.reconstructed.fidelity.diagnostic.build${shortHash}`, infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleDisplayName", "-string", `Grok Bot 0.18 Fidelity Diagnostic-${shortHash}`, infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-remove", "CFBundleURLTypes", infoPlist]);
+await retargetPackagedElectronHelpers(stagedApp);
 await rm(path.join(stagedApp, "Contents", "_CodeSignature"), { recursive: true, force: true });
 await signAppBundleAdHoc(stagedApp);
 await run(SYSTEM_TOOLS.codesign, ["--verify", "--deep", "--strict", stagedApp]);

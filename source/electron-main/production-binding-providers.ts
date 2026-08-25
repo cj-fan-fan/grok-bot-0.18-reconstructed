@@ -465,6 +465,7 @@ export function createProductionStartupBinding(
   ports: ElectronStartupProviderPorts,
 ): ElectronProductionStartupBindings {
   for (const [value, label] of [
+    [ports?.app?.setName, "electron.app.setName()."],
     [ports?.app?.setPath, "electron.app.setPath()."],
     [ports?.app?.getPath, "electron.app.getPath()."],
     [ports?.app?.isInApplicationsFolder, "electron.app.isInApplicationsFolder()."],

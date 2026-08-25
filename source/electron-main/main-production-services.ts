@@ -69,7 +69,9 @@ export interface ElectronPackageMetadata {
 
 export interface ElectronProductionApp extends ElectronMainApp {
   getName(): string;
+  setName?(name: string): void;
   getPath(name: "userData" | "temp"): string;
+  setPath?(name: "userData" | "sessionData", path: string): void;
   exit(code: number): void;
   setAsDefaultProtocolClient?(protocol: string, path?: string, args?: readonly string[]): boolean;
   readonly runningUnderARM64Translation?: boolean;
