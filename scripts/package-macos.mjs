@@ -9,6 +9,7 @@ import {
 } from "./lib/config.mjs";
 import { buildFidelityReconstructedAsar } from "./clean-build.mjs";
 import { signAppBundleAdHoc } from "./lib/codesign.mjs";
+import { retargetPackagedElectronHelpers } from "./lib/electron-mac-helpers.mjs";
 import { verifyOfficialMacReference, verifyReconstructedMacPackage } from "./lib/macos-package-verification.mjs";
 import { run } from "./lib/process.mjs";
 import { SYSTEM_TOOLS } from "./lib/system-tools.mjs";
@@ -53,9 +54,11 @@ await run(SYSTEM_TOOLS.plutil, ["-replace", "CFBundleDisplayName", "-string", re
 // callbacks to the official Grok Bot (`sand` / `grokbot`).
 await run(SYSTEM_TOOLS.plutil, ["-remove", "CFBundleURLTypes", infoPlist]);
 await run(SYSTEM_TOOLS.plutil, ["-insert", "CFBundleURLTypes", "-xml", `<array><dict><key>CFBundleTypeRole</key><string>Viewer</string><key>CFBundleURLName</key><string>Grok Bot reconstructed auth callback</string><key>CFBundleURLSchemes</key><array><string>${reconstructedUrlScheme}</string></array></dict></array>`, infoPlist]);
-// Keep CFBundleExecutable as "Grok Bot": Electron derives nested helper names
-// from the ABI-matched 0.18 runtime binaries. CFBundleName/productName isolate
-// Dock, menu bar, userData, and the single-instance lock.
+// Keep CFBundleExecutable as "Grok Bot". Electron 42 looks up helpers first as
+// `{ELECTRON_PRODUCT_NAME} Helper*.app` (the 0.18 shell is still "Electron"),
+// then `{CFBundleName} Helper*.app`, and Chromium expects helper bundle IDs
+// `{CFBundleIdentifier}.helper{,.GPU,.Plugin,.Renderer}`.
+await retargetPackagedElectronHelpers(outputApp);
 
 await rm(path.join(outputApp, "Contents", "_CodeSignature"), { recursive: true, force: true });
 try {

@@ -48,9 +48,11 @@ The upstream app installed on the machine is never overwritten. Official Grok
 Bot and the reconstructed build are intended to run side-by-side: the fork uses
 `com.anysphere.sand.reconstructed`, product/CFBundleName
 `Grok Bot 0.18 Reconstructed` (so Application Support is not `Grok Bot`),
-scheme `sand-reconstructed` instead of `sand`/`grokbot`, and remapped local
-Docker loopback ports. Cursor.com login redirects that still emit `sand://`
-continue to belong to the official app.
+Electron helper IDs `com.anysphere.sand.reconstructed.helper{,.GPU,.Plugin,.Renderer}`
+with helper app names matching that CFBundleName, scheme `sand-reconstructed`
+instead of `sand`/`grokbot`, and remapped local Docker loopback ports.
+Cursor.com login redirects that still emit `sand://` continue to belong to the
+official app.
 
 ### Why retain the shipped renderer?
 

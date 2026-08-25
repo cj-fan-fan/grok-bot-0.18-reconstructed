@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { extractFile, listPackage, statFile } from "@electron/asar";
 
+import { assertPackagedElectronHelpers } from "./electron-mac-helpers.mjs";
 import {
   expectedSignatureExcludedMachOHash,
   inspectReconstructedMacShell,
@@ -361,5 +362,6 @@ export async function verifyReconstructedMacPackage({ officialApp, reconstructed
   if (sha256(officialAsar) !== officialMacReleaseAsarHash) throw new Error("Reconstructed verification received a non-canonical official app.asar reference");
   if (sha256(reconstructedAsar) === officialMacReleaseAsarHash) throw new Error("Reconstructed package must not copy the official app.asar");
   const runtime = await verifyUnpackedRuntimeManifest({ sourceUnpackedRoot, packagedUnpackedRoot });
-  return { invariant, reconstructedAsarHash: sha256(reconstructedAsar), runtime };
+  const helpers = await assertPackagedElectronHelpers(reconstructedApp);
+  return { invariant, reconstructedAsarHash: sha256(reconstructedAsar), runtime, helpers };
 }

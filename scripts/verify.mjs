@@ -14,6 +14,7 @@ import {
   upstreamAsarSha256,
 } from "./lib/config.mjs";
 import { prepareReconstructedElectronMainArtifactFallback } from "./lib/build-asar.mjs";
+import { assertPackagedElectronHelpers } from "./lib/electron-mac-helpers.mjs";
 import { resolvePackagedAppArtifacts } from "./lib/packaged-app.mjs";
 import { capture, run } from "./lib/process.mjs";
 import { SYSTEM_TOOLS } from "./lib/system-tools.mjs";
@@ -264,6 +265,7 @@ if (plistText.includes("ElectronAsarIntegrity")) throw new Error("Stale Electron
 const urlTypes = await capture(SYSTEM_TOOLS.plutil, ["-extract", "CFBundleURLTypes", "xml1", "-o", "-", infoPlist]);
 if (!new RegExp(`<key>CFBundleURLSchemes</key>[\\s\\S]*<string>${reconstructedUrlScheme}</string>`).test(urlTypes)) throw new Error("Reconstructed application has no unique URL registration");
 if (/<string>sand<\/string>|<string>grokbot<\/string>/.test(urlTypes)) throw new Error("Reconstructed application still claims an official URL scheme");
+await assertPackagedElectronHelpers(verifiedApp, { expectedParentBundleId: reconstructedBundleId });
 
 await run(SYSTEM_TOOLS.codesign, ["--verify", "--deep", "--strict", verifiedApp]);
 const cleanCount = runtimeComposition.filter(({ mode }) => mode === "clean-source").length;
