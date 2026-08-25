@@ -115,6 +115,14 @@ The container:
 Docker Desktop, or another compatible local Docker daemon, must be running.
 Remote mode remains the default.
 
+### Simplified Chinese UI
+
+Packaged reconstructed builds default to Simplified Chinese (`zh-CN`). The
+checksum-pinned English renderer stays the artifact baseline; `npm run package`
+rewrites quoted user-facing copy through the existing renderer transform, and
+native menus, dialogs, and notifications use the same locale table. Identifiers,
+bundle IDs, protocol fields, and developer-facing docs remain English.
+
 ## Requirements
 
 - macOS on Apple Silicon

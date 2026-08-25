@@ -2,6 +2,7 @@ import { open, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
 import { posixPathFromFileUrl } from "../../shared/node/paths.js";
+import { uiCopy } from "../../shared/ui-locale.js";
 
 export const GATEWAY_READ_CHUNK_BYTES = 4 * 1024 * 1024;
 export const LINK_PREVIEW_PHOTO_MAX_DIMENSION = 1280;
@@ -72,7 +73,7 @@ export function createAttachmentEdgePort(deps: AttachmentEdgeDeps) {
     } catch (error) { report("read-bytes", error); return null; }
     return offset < totalSize ? null : { kind: "bytes", bytes: new Uint8Array(buffer) };
   };
-  const failDownload = async (reason: string): Promise<false> => { deps.onEdgeFailure({ leg: "download", errorClass: reason }); try { await deps.showErrorMessage(deps.getMainWindow(), { type: "error", title: "Save File", message: "Couldn't save this file" }); } catch (error) { report("download", error); } return false; };
+  const failDownload = async (reason: string): Promise<false> => { deps.onEdgeFailure({ leg: "download", errorClass: reason }); try { await deps.showErrorMessage(deps.getMainWindow(), { type: "error", title: uiCopy("Save File"), message: uiCopy("Couldn't save this file") }); } catch (error) { report("download", error); } return false; };
 
   return {
     async resolveMedia(source: unknown) {

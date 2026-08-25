@@ -7,6 +7,7 @@ import {
   parseJwtPayload,
   shouldRefreshAccessToken,
 } from "../../shared/node/cursor-token.js";
+import { uiCopy } from "../../shared/ui-locale.js";
 import { findSystemErrno } from "../../shared/system-errno.js";
 import { createLocalCliModeHeaders } from "../../packages/cursor-config/request.js";
 import { LoginManager } from "../../packages/cursor-config/auth/login.js";
@@ -23,9 +24,9 @@ export const DEFAULT_LOCAL_CURSOR_WEBSITE_URL = "https://localhost:4443";
 export const MAX_LOGIN_POLL_ATTEMPTS = 150;
 export { SignInPolicyViolationError, SIGN_IN_POLICY_VIOLATION_ERROR, SIGN_IN_POLICY_VIOLATION_MESSAGE } from "../../packages/cursor-config/auth/mdm-sign-in-policy.js";
 export class SandAuthOperationSupersededError extends Error { constructor() { super("Authentication operation was superseded."); } }
-export class SandAuthSignInRequiredError extends Error { constructor() { super("Sign in to Cursor to run Grok Bot."); } }
-export class SandAuthSignInExpiredError extends Error { constructor() { super("Cursor sign-in expired. Sign in again to run Grok Bot."); } }
-export class SandAuthLoginTimedOutError extends Error { constructor() { super("Cursor sign-in did not finish. Try again."); } }
+export class SandAuthSignInRequiredError extends Error { constructor() { super(uiCopy("Sign in to Cursor to run Grok Bot.")); } }
+export class SandAuthSignInExpiredError extends Error { constructor() { super(uiCopy("Cursor sign-in expired. Sign in again to run Grok Bot.")); } }
+export class SandAuthLoginTimedOutError extends Error { constructor() { super(uiCopy("Cursor sign-in did not finish. Try again.")); } }
 export class SandDevLoginError extends Error {}
 
 export type SandAuthStatus =
@@ -50,14 +51,14 @@ export type SessionSettlement =
   | { readonly kind: "signed_out"; readonly cause: SessionSignoutCause; readonly durable: boolean; readonly accessToken: string }
   | { readonly kind: "keychain_unavailable"; readonly accessToken: string };
 
-const RETAINED_AFTER_FAILED_LOGOUT_STATUS = { kind: "logged-out", errorMessage: "Grok Bot couldn't remove the saved Cursor sign-in. The account may return after Grok Bot restarts. Sign in to try again." } as const;
+const RETAINED_AFTER_FAILED_LOGOUT_STATUS = { kind: "logged-out", errorMessage: uiCopy("Grok Bot couldn't remove the saved Cursor sign-in. The account may return after Grok Bot restarts. Sign in to try again.") } as const;
 const LOGGED_OUT_STATUS = { kind: "logged-out" } as const;
-const SIGN_IN_CONFIRMATION_FAILED_STATUS = { kind: "logged-out", errorMessage: "Grok Bot couldn't confirm your Cursor sign-in. Restart Grok Bot or sign in again." } as const;
-const SIGN_IN_EXPIRED_STATUS = { kind: "logged-out", errorMessage: "Cursor sign-in expired. Sign in again to run Grok Bot." } as const;
-const SIGN_IN_POLICY_VIOLATION_STATUS = { kind: "logged-out", errorMessage: SIGN_IN_POLICY_VIOLATION_MESSAGE } as const;
-const LOGIN_DID_NOT_FINISH_STATUS = { kind: "logged-out", errorMessage: "Cursor sign-in did not finish. Try again." } as const;
-const ACCOUNT_REFUSED_STATUS = { kind: "logged-out", errorMessage: "This computer is linked to another Cursor account. Sign in with that account to continue." } as const;
-const ACCOUNT_REFUSED_CREDENTIALS_RETAINED_STATUS = { kind: "logged-out", errorMessage: "This computer is linked to another Cursor account. Grok Bot couldn't remove the saved Cursor sign-in, so the account may return after restart. Sign in with the linked account to continue." } as const;
+const SIGN_IN_CONFIRMATION_FAILED_STATUS = { kind: "logged-out", errorMessage: uiCopy("Grok Bot couldn't confirm your Cursor sign-in. Restart Grok Bot or sign in again.") } as const;
+const SIGN_IN_EXPIRED_STATUS = { kind: "logged-out", errorMessage: uiCopy("Cursor sign-in expired. Sign in again to run Grok Bot.") } as const;
+const SIGN_IN_POLICY_VIOLATION_STATUS = { kind: "logged-out", errorMessage: uiCopy(SIGN_IN_POLICY_VIOLATION_MESSAGE) } as const;
+const LOGIN_DID_NOT_FINISH_STATUS = { kind: "logged-out", errorMessage: uiCopy("Cursor sign-in did not finish. Try again.") } as const;
+const ACCOUNT_REFUSED_STATUS = { kind: "logged-out", errorMessage: uiCopy("This computer is linked to another Cursor account. Sign in with that account to continue.") } as const;
+const ACCOUNT_REFUSED_CREDENTIALS_RETAINED_STATUS = { kind: "logged-out", errorMessage: uiCopy("This computer is linked to another Cursor account. Grok Bot couldn't remove the saved Cursor sign-in, so the account may return after restart. Sign in with the linked account to continue.") } as const;
 
 function base64UrlEncode(bytes: Uint8Array): string { return Buffer.from(bytes).toString("base64url"); }
 export function createLoginMetadata(): { challenge: string; metadata: LoginMetadata } {

@@ -4,6 +4,7 @@ import { fetchCursorProfile, fetchLocalToolPermissionCeiling, fetchUserPrivacyMo
 import { SandTranscriptionManager, type SandTranscriptionOptions } from "./cursor-transcribe.js";
 import { syncSandSentryAccount } from "../telemetry/sentry.js";
 import type { PrivacyMode } from "../../shared/observability/sentry-privacy-mode.js";
+import { uiCopy } from "../../shared/ui-locale.js";
 
 export const SUPPORTED_DASHBOARD_ACTIONS = new Set(["requestLimitIncrease"] as const);
 export const NO_SAND_PR_REVIEW_PREFERENCES = { user: undefined, team: undefined } as const;
@@ -169,11 +170,11 @@ export function createCursorAccountEdgePort(deps: {
     getUsageSummary: async () => !await deps.isUsagePageEnabled() ? null : await withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.fetchUsageSummary(tokenReader(service)) : null),
     getPrReviewPreferences: async () => withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.fetchPrReviewPreferences(tokenReader(service)) : NO_SAND_PR_REVIEW_PREFERENCES),
     getPrivacyModeEnabled: async () => withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.fetchPrivacyModeEnabled(tokenReader(service)) : true),
-    cancelTrial: async () => !await deps.isUsagePageEnabled() ? { ok: false, message: "This isn’t available right now" } : await withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.cancelTrial(tokenReader(service)) : { ok: false, message: "Sign in to Cursor to continue" }),
+    cancelTrial: async () => !await deps.isUsagePageEnabled() ? { ok: false, message: uiCopy("This isn’t available right now") } : await withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.cancelTrial(tokenReader(service)) : { ok: false, message: uiCopy("Sign in to Cursor to continue") }),
     invokeDashboardAction: async (raw: unknown) => {
       const request = parseDashboardActionRequest(raw);
-      if (request == null) return { ok: false, message: `This action isn’t supported by this version of ${deps.productDisplayName ?? "Grok Bot"}` };
-      return await withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.invokeDashboardAction(tokenReader(service), request) : { ok: false, message: "Sign in to Cursor to continue" });
+      if (request == null) return { ok: false, message: `${uiCopy("This action isn’t supported by this version of ")}${deps.productDisplayName ?? "Grok Bot"}` };
+      return await withService(async (service) => (await service.getStatus()).kind === "logged-in" ? await deps.invokeDashboardAction(tokenReader(service), request) : { ok: false, message: uiCopy("Sign in to Cursor to continue") });
     },
   };
 }

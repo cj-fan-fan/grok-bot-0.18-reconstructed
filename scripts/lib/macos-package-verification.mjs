@@ -97,12 +97,13 @@ export async function verifyChecksumPinnedRendererPackage({
     if (parsed?.schemaVersion !== 1 || parsed?.mode !== "original-renderer-settings-extension" || !Array.isArray(parsed.chunks)) {
       throw new Error("Renderer extension provenance contract is invalid");
     }
-    const allowedKeys = ["schemaVersion", "mode", "chunks", "features", "transformations"];
+    const allowedKeys = ["schemaVersion", "mode", "locale", "chunks", "features", "transformations"];
     if (Object.keys(parsed).sort().join("\0") !== allowedKeys.sort().join("\0")) throw new Error("Renderer extension provenance has unknown fields");
+    if (parsed.locale !== "zh-CN") throw new Error("Renderer extension locale is invalid");
     const chunks = new Map();
     for (const row of parsed.chunks) {
       const relative = typeof row?.path === "string" && row.path.startsWith("dist/renderer/") ? row.path.slice("dist/renderer/".length) : null;
-      if (relative == null || !expectedFiles.has(relative) || chunks.has(relative) || !["registry", "panel"].includes(row.role)
+      if (relative == null || !expectedFiles.has(relative) || chunks.has(relative) || !["registry", "panel", "locale"].includes(row.role)
         || !Number.isInteger(row.original?.bytes) || !/^[0-9a-f]{64}$/.test(row.original?.sha256)
         || !Number.isInteger(row.patched?.bytes) || !/^[0-9a-f]{64}$/.test(row.patched?.sha256)) {
         throw new Error("Renderer extension chunk provenance is invalid");
@@ -111,7 +112,10 @@ export async function verifyChecksumPinnedRendererPackage({
       if (row.original.bytes !== expected.bytes || row.original.sha256 !== expected.sha256) throw new Error(`Renderer extension source identity drift at ${relative}`);
       chunks.set(relative, row);
     }
-    if (chunks.size < 1 || chunks.size > 2) throw new Error("Renderer extension chunk cardinality is invalid");
+    if (chunks.size < 1 || chunks.size > 64) throw new Error("Renderer extension chunk cardinality is invalid");
+    if (![...chunks.values()].some((row) => row.role === "registry") || ![...chunks.values()].some((row) => row.role === "panel")) {
+      throw new Error("Renderer extension is missing the Settings registry or panel chunk");
+    }
     rendererExtension = { bytes, parsed, chunks };
   } catch (error) {
     if (!(error instanceof Error) || !/not found in archive|Cannot find/.test(error.message)) throw error;

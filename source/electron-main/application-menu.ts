@@ -1,3 +1,4 @@
+import { uiCopy } from "../shared/ui-locale.js";
 import type { WindowShortcut } from "./window-shortcuts.js";
 
 export type ApplicationMenuRole =
@@ -46,7 +47,7 @@ export function buildApplicationMenuTemplate(
     template.push({
       label: electron.appName,
       submenu: [
-        { label: `About ${electron.appName}`, click: () => options.emitOpenAbout() },
+        { label: `${uiCopy("About")} ${electron.appName}`, click: () => options.emitOpenAbout() },
         { type: "separator" },
         { role: "services" },
         { type: "separator" },
@@ -59,13 +60,13 @@ export function buildApplicationMenuTemplate(
     });
   }
   template.push({
-    label: "File",
+    label: uiCopy("File"),
     submenu: [isMac ? { role: "close" } : { role: "quit" }],
   });
   template.push({ role: "editMenu" });
   const viewSubmenu: ApplicationMenuItem[] = [
     {
-      label: "Reload",
+      label: uiCopy("Reload"),
       accelerator: "CmdOrCtrl+R",
       click: () => options.applyWindowShortcut("reload"),
     },
@@ -74,7 +75,7 @@ export function buildApplicationMenuTemplate(
     viewSubmenu.push(
       { type: "separator" },
       {
-        label: "Toggle Developer Tools",
+        label: uiCopy("Toggle Developer Tools"),
         accelerator: isMac ? "Cmd+Alt+I" : "Ctrl+Shift+I",
         click: () => options.applyWindowShortcut("toggledevtools"),
       },
@@ -85,24 +86,24 @@ export function buildApplicationMenuTemplate(
     isMac
       ? { role: "togglefullscreen" }
       : {
-          label: "Toggle Full Screen",
+          label: uiCopy("Toggle Full Screen"),
           accelerator: "F11",
           click: () => options.applyWindowShortcut("fullscreen"),
         },
   );
-  template.push({ label: "View", submenu: viewSubmenu });
+  template.push({ label: uiCopy("View"), submenu: viewSubmenu });
   template.push({ role: "windowMenu" });
   template.push({
     role: "help",
     submenu: [
       {
-        label: "Help Center",
+        label: uiCopy("Help Center"),
         click: () => {
           void electron.openExternal("https://cursor.com/help");
         },
       },
       { type: "separator" },
-      { label: "Send Feedback", click: () => options.emitOpenFeedback() },
+      { label: uiCopy("Send Feedback"), click: () => options.emitOpenFeedback() },
     ],
   });
   return template;

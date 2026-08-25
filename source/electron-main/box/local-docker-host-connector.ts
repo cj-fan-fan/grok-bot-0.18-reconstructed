@@ -9,6 +9,7 @@ import type { SandSettingsStore } from "../../shared/node/settings/sand-settings
 import type { RecreateResult } from "./box-recreate-commands.js";
 import type { SandRemoteHostConnector } from "./box-host-connector.js";
 import type { GatewayConnection } from "./gateway-descriptor-cache.js";
+import { uiCopy } from "../../shared/ui-locale.js";
 
 export const LOCAL_DOCKER_BOX_IMAGE = "public.ecr.aws/k0i0n2g5/cursorenvironments/universal:sand-box-latest";
 export const LOCAL_DOCKER_BOX_CONTAINER = "grok-bot-local-vm";
@@ -102,13 +103,13 @@ async function inspectContainer(): Promise<{ exists: boolean; running: boolean; 
 }
 
 export async function getLocalDockerStatus(settingsPath: string): Promise<LocalDockerStatus> {
-  const daemon = await runDocker(["info", "--format", "{{.ServerVersion}}"]).catch(() => ({ ok: false, output: "Docker is not installed." }));
-  if (!daemon.ok) return { available: false, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: daemon.output || "Docker is not running." };
+  const daemon = await runDocker(["info", "--format", "{{.ServerVersion}}"]).catch(() => ({ ok: false, output: uiCopy("Docker is not installed.") }));
+  if (!daemon.ok) return { available: false, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: daemon.output || uiCopy("Docker is not running.") };
   const inspected = await inspectContainer();
-  if (!inspected.exists) return { available: true, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: "Ready to create the local VM." };
-  if (!inspected.owned) return { available: true, running: inspected.running, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: `Container ${LOCAL_DOCKER_BOX_CONTAINER} exists but is not owned by Grok Bot.` };
+  if (!inspected.exists) return { available: true, running: false, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: LOCAL_DOCKER_BOX_IMAGE, detail: uiCopy("Ready to create the local VM.") };
+  if (!inspected.owned) return { available: true, running: inspected.running, ready: false, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: uiCopy("Container grok-bot-local-vm exists but is not owned by Grok Bot.") };
   const ready = inspected.running && await gatewayReady(await readOrCreateToken(settingsPath));
-  return { available: true, running: inspected.running, ready, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: ready ? "Local Docker VM is ready." : inspected.running ? "Container is starting." : "Local Docker VM is stopped." };
+  return { available: true, running: inspected.running, ready, containerName: LOCAL_DOCKER_BOX_CONTAINER, image: inspected.image, detail: ready ? uiCopy("Local Docker VM is ready.") : inspected.running ? uiCopy("Container is starting.") : uiCopy("Local Docker VM is stopped.") };
 }
 
 let ensureInFlight: Promise<GatewayConnection> | undefined;
@@ -166,20 +167,20 @@ async function ensureLocalDockerBox(settingsPath: string, inferenceCredential?: 
   const token = await readOrCreateToken(settingsPath);
   const hostBundle = await stageCurrentHostBundle(settingsPath);
   const inferenceFile = inferenceCredential == null ? undefined : await persistInferenceCredential(settingsPath, inferenceCredential);
-  const daemon = await runDocker(["info", "--format", "{{.ServerVersion}}"]).catch(() => ({ ok: false, output: "Docker is not installed." }));
-  if (!daemon.ok) throw new Error(`Local Docker VM is selected, but Docker is unavailable: ${daemon.output || "start Docker and try again"}`);
+  const daemon = await runDocker(["info", "--format", "{{.ServerVersion}}"]).catch(() => ({ ok: false, output: uiCopy("Docker is not installed.") }));
+  if (!daemon.ok) throw new Error(`${uiCopy("Local Docker VM is selected, but Docker is unavailable:")} ${daemon.output || uiCopy("start Docker and try again")}`);
   const inspected = await inspectContainer();
-  if (inspected.exists && !inspected.owned) throw new Error(`Local Docker VM cannot use ${LOCAL_DOCKER_BOX_CONTAINER}: an unowned container already has that name.`);
+  if (inspected.exists && !inspected.owned) throw new Error(uiCopy("Local Docker VM cannot use grok-bot-local-vm: an unowned container already has that name."));
   if (inspected.exists && inspected.image !== LOCAL_DOCKER_BOX_IMAGE) throw new Error(`Local Docker VM container uses unexpected image ${inspected.image}. Remove it explicitly before changing images.`);
   if (inspected.exists && (inspected.schemaVersion !== LOCAL_DOCKER_SCHEMA_VERSION || inspected.hostSha256 !== hostBundle.sha256 || (inferenceCredential != null && !inspected.hasInferenceCredential))) {
     const removed = await runDocker(["rm", "--force", LOCAL_DOCKER_BOX_CONTAINER]);
-    if (!removed.ok) throw new Error(`Could not replace the local VM with the current app runtime: ${removed.output}`);
+    if (!removed.ok) throw new Error(`${uiCopy("Could not replace the local VM with the current app runtime:")} ${removed.output}`);
   }
   const shouldReplace = inspected.exists && (inspected.schemaVersion !== LOCAL_DOCKER_SCHEMA_VERSION || inspected.hostSha256 !== hostBundle.sha256 || (inferenceCredential != null && !inspected.hasInferenceCredential));
   const current = shouldReplace ? await inspectContainer() : inspected;
   if (current.exists && !current.running) {
     const started = await runDocker(["start", LOCAL_DOCKER_BOX_CONTAINER]);
-    if (!started.ok) throw new Error(`Could not start the local Docker VM: ${started.output}`);
+    if (!started.ok) throw new Error(`${uiCopy("Could not start the local Docker VM:")} ${started.output}`);
   } else if (!current.exists) {
     const authMounts = await localAuthMountArguments();
     const created = await runDocker([
@@ -200,7 +201,7 @@ async function ensureLocalDockerBox(settingsPath: string, inferenceCredential?: 
       ...authMounts,
       LOCAL_DOCKER_BOX_IMAGE,
     ]);
-    if (!created.ok) throw new Error(`Could not create the local Docker VM: ${created.output}`);
+    if (!created.ok) throw new Error(`${uiCopy("Could not create the local Docker VM:")} ${created.output}`);
   }
   const deadline = Date.now() + READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
@@ -212,7 +213,7 @@ async function ensureLocalDockerBox(settingsPath: string, inferenceCredential?: 
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
   }
-  throw new Error("Local Docker VM did not expose its gateway within three minutes.");
+  throw new Error(uiCopy("Local Docker VM did not expose its gateway within three minutes."));
 }
 
 export async function startLocalDockerBox(settingsPath: string): Promise<GatewayConnection> {
@@ -224,7 +225,7 @@ export async function stopLocalDockerBox(): Promise<void> {
   if (!inspected.exists || !inspected.running) return;
   if (!inspected.owned) throw new Error(`Refusing to stop unowned container ${LOCAL_DOCKER_BOX_CONTAINER}.`);
   const stopped = await runDocker(["stop", LOCAL_DOCKER_BOX_CONTAINER]);
-  if (!stopped.ok) throw new Error(`Could not stop the local Docker VM: ${stopped.output}`);
+  if (!stopped.ok) throw new Error(`${uiCopy("Could not stop the local Docker VM:")} ${stopped.output}`);
 }
 
 export function createSettingsRoutedHostConnector(

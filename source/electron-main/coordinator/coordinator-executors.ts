@@ -21,6 +21,7 @@ import {
   type ExpectedLocalExecProcessIdentity,
   type LocalExecProcessIdentity,
 } from "../../shared/local-exec-process-identity.js";
+import { uiCopy } from "../../shared/ui-locale.js";
 
 export interface WebAuthnPromptWindowOptions {
   readonly width: number;
@@ -132,7 +133,7 @@ const PROMPT_WINDOW_OPTIONS: WebAuthnPromptWindowOptions = {
   minimizable: false,
   maximizable: false,
   alwaysOnTop: true,
-  title: "Security key request",
+  title: uiCopy("Security key request"),
   webPreferences: { nodeIntegration: false, contextIsolation: true },
 };
 
@@ -228,28 +229,28 @@ function renderPrompt(origin: string, rpId: string): string {
 	}
 </style>
 <div id="prompt">
-	<h1>Use your security key?</h1>
+	<h1>${uiCopy("Use your security key?")}</h1>
 	<div class="origin" id="origin"></div>
 	<p id="detail"></p>
 	<div class="row">
-		<button id="deny">Deny</button>
-		<button id="allow" class="primary">Approve</button>
+		<button id="deny">${uiCopy("Deny")}</button>
+		<button id="allow" class="primary">${uiCopy("Approve")}</button>
 	</div>
 </div>
 <div id="working" hidden>
-	<h1>Waiting for your security key</h1>
+	<h1>${uiCopy("Waiting for your security key")}</h1>
 	<div class="origin" id="origin-working"></div>
 	<p id="status"></p>
 	<div class="spinner"></div>
 </div>
 <div id="pin-prompt" hidden>
-	<h1>Enter your security key PIN</h1>
+	<h1>${uiCopy("Enter your security key PIN")}</h1>
 	<div class="origin" id="origin-pin"></div>
 	<p id="pin-detail"></p>
 	<input id="pin" type="password" />
 	<div class="row">
-		<button id="pin-cancel">Cancel</button>
-		<button id="pin-submit" class="primary">Continue</button>
+		<button id="pin-cancel">${uiCopy("Cancel")}</button>
+		<button id="pin-submit" class="primary">${uiCopy("Continue")}</button>
 	</div>
 </div>
 <script>
@@ -259,8 +260,8 @@ function renderPrompt(origin: string, rpId: string): string {
 		document.getElementById(id).textContent = origin;
 	}
 	document.getElementById("detail").textContent =
-		"A browser in your Grok Bot box is asking to sign in to " + rpId +
-		" with the security key plugged into this computer. Approve only if you started this.";
+		${JSON.stringify(uiCopy("A browser in your Grok Bot box is asking to sign in to "))} + rpId +
+		${JSON.stringify(uiCopy(" with the security key plugged into this computer. Approve only if you started this."))};
 
 	const panels = ["prompt", "working", "pin-prompt"];
 	function show(name) {
@@ -284,10 +285,10 @@ function renderPrompt(origin: string, rpId: string): string {
 		const field = document.getElementById("pin");
 		field.value = "";
 		document.getElementById("pin-detail").textContent = request.invalid
-			? "That PIN was not accepted." + (request.retries == null
-				? " Try again."
-				: " " + request.retries + " attempts left before the key locks itself.")
-			: "Your security key is protected by a PIN. Enter it to sign in to " + rpId + ".";
+			? ${JSON.stringify(uiCopy("That PIN was not accepted."))} + (request.retries == null
+				? ${JSON.stringify(" " + uiCopy("Try again."))}
+				: " " + request.retries + ${JSON.stringify(uiCopy(" attempts left before the key locks itself."))})
+			: ${JSON.stringify(uiCopy("Your security key is protected by a PIN. Enter it to sign in to "))} + rpId + ".";
 		show("pin-prompt");
 		field.focus();
 		return new Promise(resolve => { answerPin = resolve; });
@@ -302,17 +303,17 @@ function renderPrompt(origin: string, rpId: string): string {
 		const pin = document.getElementById("pin").value;
 		// Sending "" spends one of the key's few attempts on nothing.
 		if (pin === "") return;
-		settlePin({ pin }, "Checking your PIN\u2026");
+		settlePin({ pin }, ${JSON.stringify(uiCopy("Checking your PIN…"))});
 	}
 	function cancelPin() {
-		settlePin({ pin: null }, "Cancelling\u2026");
+		settlePin({ pin: null }, ${JSON.stringify(uiCopy("Cancelling…"))});
 	}
 	document.getElementById("pin-submit").onclick = submitPin;
 	document.getElementById("pin-cancel").onclick = cancelPin;
 
 	const answer = new Promise(resolve => {
 		document.getElementById("allow").onclick = () => {
-			working("Waking your security key\u2026");
+			working(${JSON.stringify(uiCopy("Waking your security key…"))});
 			resolve({ approved: true });
 		};
 		document.getElementById("deny").onclick = () => resolve({ approved: false });

@@ -22,7 +22,9 @@ The original application was Developer ID signed and notarized by Anysphere Inco
 The shipped renderer contained optimized production bundles, not the authored
 frontend source or source maps. The readable `frontend/` tree is therefore a
 partial evidence-backed reconstruction, while packaged builds retain the pinned
-renderer and apply only a narrow, hash-recorded settings transform.
+renderer and apply only a narrow, hash-recorded settings transform, including a
+zh-CN rewrite of quoted user-facing copy. Identifiers, protocol fields, and
+recovered evidence strings stay English.
 
 No upstream source-code license is implied. Do not present reconstructed
 material as original source or an official build, and complete an independent
